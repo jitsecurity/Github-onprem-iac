@@ -15,7 +15,7 @@ variable "cloudflare_email" {
 
 variable "jit_name_prefix" {
   type        = string
-  default     = "xm-cyber-poc"
+  default     = "poc"
   description = "Prefix for AWS resources"
 }
 
