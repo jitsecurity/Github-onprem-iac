@@ -29,7 +29,7 @@ Change these variables in the file `xmcyber.tfvars`
 | `desired_size`  | `number` | `1`       | Desired number of worker nodes         |
 | `environment`   | `string` | `"prod"`  | Tenant/environment label               |
 | `instance_types`| `list`   | `["c6a.large","m5.large"]`  | Instance type for Karpenter              |
-| `jit_name_prefix`      | `string` | `xm-cyber-poc` | Prefix for AWS and Kubernetes resources |
+| `jit_name_prefix`      | `string` | `poc` | Prefix for AWS and Kubernetes resources |
 
 ---
 
@@ -62,7 +62,7 @@ After completeing the `terraform` part continue with `helm`.
 # export AWS_PROFILE or other approach
 
 # Update your local kubeconfig
-aws eks update-kubeconfig --name xm-cyber-poc
+aws eks update-kubeconfig --name poc
 
 # Modify pr-agent/values.yaml on line 12
 # Change tenant_id to your tenant provided by JIT
