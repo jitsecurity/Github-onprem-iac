@@ -74,7 +74,7 @@ module "eks" {
 module "s3_bucket" {
   source = "terraform-aws-modules/s3-bucket/aws"
 
-  bucket = "xm-cyber-poc-${var.environment}"
+  bucket = "poc-${var.environment}"
   acl    = "private"
 
   control_object_ownership = true
