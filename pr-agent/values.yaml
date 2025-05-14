@@ -74,7 +74,7 @@ storage:
     driver: s3.csi.aws.com
     volumeHandlePrefix: "jit-orchestrator-mountpoint-"
     volumeAttributes:
-      bucketNamePrefix: "xm-cyber-poc-"
+      bucketNamePrefix: "poc-"
       mountOptions: "allow-delete,uid=1000,gid=1000,file-mode=0775,dir-mode=0775"
   mountOptions:
     - "allow-delete"
