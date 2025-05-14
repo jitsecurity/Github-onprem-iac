@@ -39,6 +39,7 @@ Change these variables in the file `xmcyber.tfvars`
 |-----------------|----------|-----------|----------------------------------------|
 | `ingress.host`  | `string` | `domain`  | Your desired URL for the PR-Agent      |
 | `tenant_id`     | `string` | `0000-0000` | Tenant id provided by JIT         |
+| `lumigo.token`  | `string` | `change_me_please` | Tenant id provided by JIT         |
 
 ### Execution guide
 
@@ -62,6 +63,15 @@ After completeing the `terraform` part continue with `helm`.
 
 # Update your local kubeconfig
 aws eks update-kubeconfig --name xm-cyber-poc
+
+# Modify pr-agent/values.yaml on line 12
+# Change tenant_id to your tenant provided by JIT
+tenant_id: &tenant_id "your_tenant_id"
+
+# Modify pr-agent/values.yaml on line 17
+# Change lumigo.token to one provided by JIT
+lumigo:
+  token: "your_token"
 
 # Modify pr-agent/values.yaml on line 47
 # Change ingress.host to your desired hostname for the Web access

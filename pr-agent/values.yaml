@@ -9,12 +9,12 @@ environment:
   # Domain configurations for each environment
   domains: {}
 # Tenant configuration
-tenant_id: "b6c4985f-90c6-4e38-9c8c-b20b253d65e7" # Required: Unique tenant identifier
+tenant_id: &tenant_id "00000000000-000000000" # Required: Unique tenant identifier
 
 # Lumigo configuration
 lumigo:
   enabled: true
-  token: "t_ef4d272e78ff4870895db" # Lumigo token
+  token: "change_me_please" # Lumigo token
 
 # Deployment configuration
 replicaCount: 1
@@ -44,7 +44,7 @@ service:
 ingress:
   enabled: true
   className: nginx
-  host: &host "api-agent-d93781f6-6de2-4834-ba6f-f4c9d9254d01.jitworkspacetest.net"
+  host: &host "example.com"
   path: /
   tls: true
   tlsSecret: "pr-agent-tls-secret"
@@ -131,8 +131,8 @@ configuration:
 jit_registry_creds_manager:
   enabled: true
   jit_ecr_secret_name: 'jit-registry-creds'
-  namespace: b6c4985f-90c6-4e38-9c8c-b20b253d65e7
-  jit_base_url: https://api.rocket.jitdev.io
+  namespace: &tenant_id
+  jit_base_url: https://api.jit.io
   registry_name: "899025839375.dkr.ecr.us-east-1.amazonaws.com"
 
 
