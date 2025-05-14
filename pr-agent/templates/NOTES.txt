@@ -1,0 +1,42 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your PR Agent has been deployed with the following configuration:
+
+Tenant ID: {{ .Values.tenant_id }}
+Environment: {{ .Values.environment.name }}
+Namespace: {{ include "pr-agent.namespace" . }}
+ECR Repository: {{ include "pr-agent.ecrRepository" . }}
+
+{{- if .Values.secrets.useExistingSecret }}
+Using existing secret: {{ .Values.secrets.existingSecretName }} for .secrets.toml
+{{- else }}
+{{- if .Values.secrets.secretsToml }}
+Using provided .secrets.toml configuration
+{{- else }}
+WARNING: No .secrets.toml content was provided. The application may not function correctly.
+To provide secrets content, use:
+  helm upgrade --install {{ .Release.Name }} . \
+    --set tenant_id={{ .Values.tenant_id }} \
+    --set-file secrets.secretsToml=/path/to/.secrets.toml \
+    -f values-{{ .Values.environment.name }}.yaml
+{{- end }}
+{{- end }}
+
+{{- if .Values.gateway.enabled }}
+You can access your PR Agent at the following URL:
+https://{{ include "pr-agent.gatewayHost" . }}
+{{- end }}
+{{- if .Values.ingress.enabled }}
+You can access your PR Agent at the following URL:
+https://{{ include "pr-agent.ingressHost" . }}
+{{- else }}
+To access your PR Agent service, you need to set up your own gateway or port-forward using:
+  kubectl port-forward -n {{ include "pr-agent.namespace" . }} svc/{{ .Values.service.name }} {{ .Values.service.port }}:{{ .Values.service.port }}
+Then you can access the service at:
+  http://localhost:{{ .Values.service.port }}
+{{- end }}
+
+To verify deployment status, run:
+  kubectl get all -n {{ include "pr-agent.namespace" . }}
+
+The PR Agent has permissions to create K8s jobs in the namespace {{ include "pr-agent.namespace" . }}. 

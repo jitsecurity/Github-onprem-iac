@@ -1,0 +1,14 @@
+# The base URL for Jit APIs
+jit_base_url: "https://api.jit.io"
+
+# The Jit registry name
+registry_name: "899025839375.dkr.ecr.us-east-1.amazonaws.com"
+
+# keep job history for 1 day
+keep_job_history_seconds: 86400
+
+# Namespace to put the jobs and secrets
+namespace: "default"
+
+# The name of the secret to be used to pull from jit-ecr
+jit_ecr_secret_name: "jit-registry-creds"

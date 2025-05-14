@@ -1,0 +1,147 @@
+# Default values for PR Agent Helm chart
+
+on_prem: true
+
+# Environment configuration
+environment:
+  name: "prod"
+  accountIds: {}
+  # Domain configurations for each environment
+  domains: {}
+# Tenant configuration
+tenant_id: "b6c4985f-90c6-4e38-9c8c-b20b253d65e7" # Required: Unique tenant identifier
+
+# Lumigo configuration
+lumigo:
+  enabled: true
+  token: "t_ef4d272e78ff4870895db" # Lumigo token
+
+# Deployment configuration
+replicaCount: 1
+
+# Image configuration
+image:
+  repository: jit-orchestrator
+  accountId: "899025839375"
+  tag: latest
+  pullPolicy: Always
+
+# AWS Region for ECR
+aws:
+  region: "us-east-1"
+
+# Service configuration
+service:
+  name: "jit-agent-service"
+
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  portName: "web"
+  annotations: {}
+
+
+ingress:
+  enabled: true
+  className: nginx
+  host: &host "api-agent-d93781f6-6de2-4834-ba6f-f4c9d9254d01.jitworkspacetest.net"
+  path: /
+  tls: true
+  tlsSecret: "pr-agent-tls-secret"
+  annotations:
+    cert-manager.io/cluster-issuer: "cloudflare-issuer"
+    external-dns.alpha.kubernetes.io/hostname: *host
+
+# Gateway API HTTPRoute configuration
+gateway:
+  enabled: false
+  parentRef:
+    name: "example-gateway"
+    namespace: "default"
+
+  
+# Storage Configuration
+storage:
+  pvc:
+    create: true
+  # S3 Mountpoint configuration - used when type is "s3-mountpoint"
+  type: "s3-mountpoint"
+  mountPath: "/mnt/controls"
+  createPV: true
+  storageClassName: "s3-mountpoint-storageclass"
+  capacity: "100Gi"
+  csi:
+    driver: s3.csi.aws.com
+    volumeHandlePrefix: "jit-orchestrator-mountpoint-"
+    volumeAttributes:
+      bucketNamePrefix: "xm-cyber-poc-"
+      mountOptions: "allow-delete,uid=1000,gid=1000,file-mode=0775,dir-mode=0775"
+  mountOptions:
+    - "allow-delete"
+
+# # Service Account for pod creation permissions
+serviceAccount:
+  create: true
+  name: "jit-agent-service-account"
+  annotations: {}
+
+# Namespace configuration
+namespace:
+  create: true
+
+# Pod environment variables
+env:
+- name: DEPLOYMENT_STAGE
+  value: "dev"
+- name: AWS_REGION_NAME
+  value: "us-east-1"
+- name: LUMIGO_ENABLE_LOGS
+  value: "true"
+
+# Resource limits
+resources:
+  limits:
+    memory: 3Gi
+  requests:
+    cpu: 500m
+    memory: 3Gi
+
+# Secret configuration for .secrets.toml
+secrets:
+  # Option to use an existing secret instead of creating one
+  useExistingSecret: false
+  # Name of existing secret to use (only if useExistingSecret is true)
+  existingSecretName: ""
+  # Content of .secrets.toml file (only used if useExistingSecret is false)
+  # This should be set via --set-file secrets.secretsToml=path/to/.secrets.toml
+  # or via separate values file for security reasons
+  secretsToml: ""
+
+# Configuration for configuration.toml
+configuration:
+  # Option to use an existing configmap instead of creating one
+  useExistingConfigMap: false
+  # Name of existing configmap to use (only if useExistingConfigMap is true)
+  existingConfigMapName: ""
+  # Content of configuration.toml file (only used if useExistingConfigMap is false)
+  # This should be set via --set-file configuration.configurationToml=path/to/configuration.toml
+  # or via separate values file
+  configurationToml: ""
+
+jit_registry_creds_manager:
+  enabled: true
+  jit_ecr_secret_name: 'jit-registry-creds'
+  namespace: b6c4985f-90c6-4e38-9c8c-b20b253d65e7
+  jit_base_url: https://api.rocket.jitdev.io
+  registry_name: "899025839375.dkr.ecr.us-east-1.amazonaws.com"
+
+
+imageRollout:
+  enabled: true
+  schedule: "*/1 * * * *"
+  # Target deployment to rollout when new image is detected
+  targetDeployment: "pr-agent-server"
+  # Image repository to watch
+  watchRepository: ""  # Defaults to image.repository if empty
+  # Container name in deployment to watch
+  containerName: "server-app"

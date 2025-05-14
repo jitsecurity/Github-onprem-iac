@@ -1,0 +1,26 @@
+{{if and (eq .Values.storage.type "s3-mountpoint") .Values.storage.createPV}}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "s3-mountpoint-pv-{{ .Values.tenant_id }}"
+spec:
+  capacity:
+    storage: {{ .Values.storage.capacity }}
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ .Values.storage.storageClassName }}
+  {{- if .Values.storage.mountOptions }}
+  mountOptions:
+{{ toYaml .Values.storage.mountOptions | indent 4 }}
+  {{- end }}
+  {{- if .Values.storage.csi }}
+  csi:
+    driver: {{ .Values.storage.csi.driver }}
+    volumeHandle: "{{ .Values.storage.csi.volumeHandlePrefix }}{{ .Values.environment.name }}/{{ .Values.tenant_id }}"
+    volumeAttributes:
+      bucketName: "{{ .Values.storage.csi.volumeAttributes.bucketNamePrefix }}{{ .Values.environment.name }}"
+      mountOptions: {{ .Values.storage.csi.volumeAttributes.mountOptions }}
+      objectPrefix: "{{ .Values.tenant_id }}"
+  {{- end }}
+{{end}} 

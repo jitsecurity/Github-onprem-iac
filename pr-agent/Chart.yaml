@@ -1,0 +1,12 @@
+apiVersion: v2
+name: pr-agent
+description: A Helm chart for PR Agent deployment in Kubernetes
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+dependencies:
+  - name: jit_ecr
+    alias: jit_registry_creds_manager
+    version: 0.1.0
+    condition: jit_registry_creds_manager.enabled
+    repository: "file://charts/jit_registry_creds_manager"

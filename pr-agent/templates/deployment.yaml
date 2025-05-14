@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pr-agent-server
+  namespace: {{ include "pr-agent.namespace" . }}
+  labels:
+    app: pr-agent-server
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: pr-agent-server
+  template:
+    metadata:
+      labels:
+        app: pr-agent-server
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- if .Values.jit_registry_creds_manager.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.jit_registry_creds_manager.jit_ecr_secret_name }}
+      {{- end }}
+      containers:
+        - name: server-app
+          image: "{{ include "pr-agent.ecrRepository" . }}"
+          imagePullPolicy: Always
+          env:
+            - name: AWS_REGION
+              value: us-east-1
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: K8S_NAMESPACE
+              value: {{ include "pr-agent.namespace" . }}
+            - name: ENV_NAME
+              value: {{ .Values.environment.name | quote }}
+            {{- if .Values.lumigo.enabled }}
+            - name: AUTOWRAPT_BOOTSTRAP
+              value: lumigo_opentelemetry
+            - name: LUMIGO_TRACER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: lumigo-credentials
+                  key: token
+            - name: LUMIGO_ENABLE_LOGS
+              value: "true"
+            - name: OTEL_SERVICE_NAME
+              value: "pr-agent-{{ .Values.tenant_id }}"
+            {{- end }}
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          volumeMounts:
+            - name: controls-volume
+              mountPath: {{ .Values.storage.mountPath }}
+            - name: secrets-volume
+              mountPath: "/app/pr_agent/settings/.secrets.toml"
+              subPath: .secrets.toml
+            - name: config-volume
+              mountPath: "/app/pr_agent/settings/configuration.toml"
+              subPath: configuration.toml
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+      volumes:
+        - name: controls-volume
+          {{- if eq .Values.storage.type "pvc" }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.pvc.name }}
+          {{- else if eq .Values.storage.type "s3-mountpoint" }}
+          persistentVolumeClaim:
+            claimName: "s3-mountpoint-pvc-{{ .Values.tenant_id }}"
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: secrets-volume
+          secret:
+            {{- if .Values.secrets.useExistingSecret }}
+            secretName: {{ .Values.secrets.existingSecretName }}
+            {{- else }}
+            secretName: pr-agent-secrets
+            {{- end }}
+        - name: config-volume
+          configMap:
+            {{- if .Values.configuration.useExistingConfigMap }}
+            name: {{ .Values.configuration.existingConfigMapName }}
+            {{- else }}
+            name: pr-agent-config
+            {{- end }} 

@@ -1,0 +1,106 @@
+{{- if .Values.imageRollout.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: image-rollout-watcher
+  namespace: {{ include "pr-agent.namespace" . }}
+spec:
+  schedule: {{ .Values.imageRollout.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: Never
+          containers:
+          - name: kubectl
+            image: amazon/aws-cli:latest
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # Install kubectl
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x ./kubectl
+              mv ./kubectl /usr/local/bin/kubectl
+              
+              # Set variables
+              NAMESPACE={{ include "pr-agent.namespace" . }}
+              DEPLOYMENT={{ .Values.imageRollout.targetDeployment }}
+              CONTAINER_NAME={{ .Values.imageRollout.containerName }}
+              AWS_REGION={{ .Values.aws.region }}
+              
+              # Get repository to watch
+              {{- if .Values.imageRollout.watchRepository }}
+              REPO_TO_WATCH="{{ .Values.imageRollout.watchRepository }}"
+              {{- else }}
+              REPO_TO_WATCH="{{ include "pr-agent.ecrRepository" . }}"
+              {{- end }}
+              
+              echo "Checking for newer image of $REPO_TO_WATCH"
+              
+              # Get the current image from the deployment
+              CURRENT_IMAGE=$(kubectl get deployment $DEPLOYMENT -n $NAMESPACE -o jsonpath="{.spec.template.spec.containers[?(@.name=='$CONTAINER_NAME')].image}")
+              
+              # Parse repository name from ECR URI
+              REPO_URI=$(echo $CURRENT_IMAGE | cut -d: -f1)
+              REPO_NAME=$(echo $REPO_URI | sed 's/.*\///')
+              ECR_REGISTRY=$(echo $REPO_URI | cut -d/ -f1)
+              
+              # Extract account ID from ECR registry
+              ACCOUNT_ID=$(echo $ECR_REGISTRY | cut -d. -f1)
+              
+              echo "Repository name: $REPO_NAME"
+              echo "ECR registry: $ECR_REGISTRY"
+            
+              # Check if image has test-tags tag
+              if [[ "$CURRENT_IMAGE" == *":test-tags"* ]]; then
+                echo "Deployment is using :test-tags tag. Checking for image updates..."
+                
+                # Get image digest from ECR
+                IMAGE_DIGEST=$(aws ecr describe-images --repository-name $REPO_NAME --region $AWS_REGION --query 'imageDetails[?contains(imageTags, `test-tags`)].imageDigest' --output text)
+                echo "test-tags image digest: $IMAGE_DIGEST"
+                
+                # Store the digest in a config map for comparison
+                CM_NAME="image-digest-tracker-$DEPLOYMENT"
+                
+                # Check if config map exists
+                if kubectl get configmap $CM_NAME -n $NAMESPACE &>/dev/null; then
+                  # Get the stored digest
+                  STORED_DIGEST=$(kubectl get configmap $CM_NAME -n $NAMESPACE -o jsonpath="{.data.digest}")
+                  echo "Previously stored digest: $STORED_DIGEST"
+                  
+                  # Compare digests
+                  if [ "$IMAGE_DIGEST" != "$STORED_DIGEST" ]; then
+                    echo "Image digest has changed. Triggering rollout..."
+                    kubectl rollout restart deployment/$DEPLOYMENT -n $NAMESPACE
+                    
+                    # Update the stored digest
+                    kubectl delete configmap $CM_NAME -n $NAMESPACE
+                    kubectl create configmap $CM_NAME -n $NAMESPACE --from-literal=digest=$IMAGE_DIGEST
+                  else
+                    echo "No changes detected in the image digest. Skipping rollout."
+                  fi
+                else
+                  # Create the config map with the current digest
+                  echo "Creating initial digest tracker..."
+                  kubectl create configmap $CM_NAME -n $NAMESPACE --from-literal=digest=$IMAGE_DIGEST
+                  
+                  # Initial rollout to ensure we're using the test-tags image
+                  echo "Triggering initial rollout..."
+                  kubectl rollout restart deployment/$DEPLOYMENT -n $NAMESPACE
+                fi
+              else
+                # For non-test-tags tags, check if tag has changed
+                TAG=$(echo $CURRENT_IMAGE | cut -d: -f2)
+                echo "Deployment is using specific tag: $TAG"
+                
+                # For specific tags, we can check if new tags are available
+                # But for simplicity, we'll restart only if requested by the user
+                # or if the deployment spec has changed
+                echo "Not performing automatic rollout for specific tag deployments."
+              fi
+{{- end }} 

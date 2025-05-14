@@ -1,0 +1,9 @@
+{{- if .Values.lumigo.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lumigo-credentials
+  namespace: {{ include "pr-agent.namespace" . }}
+stringData:
+  token: {{ .Values.lumigo.token }}
+{{- end }}
