@@ -12,8 +12,8 @@ Change these variables in the file `xmcyber.tfvars`
 
 | Name                   | Type     | Description                      |
 |------------------------|----------|----------------------------------|
-| `cloudflare_zone_id`   | `string` | Cloudflare DNS zone ID           |
-| `cloudflare_api_token` | `string` | Cloudflare API token             |
+| `cloudflare_zone_id`   | `string` | Cloudflare DNS zone ID (Take it from Cloudflare Zone page)          |
+| `cloudflare_api_token` | `string` | Cloudflare API token (Generate it on Cloudflare)            |
 | `cloudflare_email`     | `string` | Cloudflare account email         |
 | `aws_region`           | `string` | AWS region (e.g., `us-east-1`)   |
 | `initial_setup`        | `string` | Conditional flag for initial setup     |
